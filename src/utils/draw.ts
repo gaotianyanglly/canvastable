@@ -4,21 +4,20 @@ export const drawLine = (
   startY: number,
   endX: number,
   endY: number,
-  color?: string
+  color?: string,
+  lineWidth: number = 1
 ) => {
+  ctx.save();
   if (color) {
-    ctx.save();
     ctx.strokeStyle = color;
   }
+  ctx.lineWidth = lineWidth;
   ctx.beginPath();
-  ctx.moveTo(startX + 0.5, startY + 0.5);
-  ctx.lineTo(endX + 0.5, endY + 0.5);
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
   ctx.closePath();
   ctx.stroke();
-
-  if (color) {
-    ctx.restore()
-  }
+  ctx.restore();
 };
 
 export const drawRect = (

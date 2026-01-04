@@ -22,34 +22,35 @@ const projectName = pkg.projectName;
 module.exports = merge(webpackCommon, {
   entry: PATH_SRC + '/test.tsx',
   output: {
-    pathinfo: true,
-    filename: '[name].[hash].js',
+    filename: '[name].[fullhash].js',
     path: PATH_DIST,
-    chunkFilename: '[name].[hash].js'
+    chunkFilename: '[name].[fullhash].js',
+    clean: true
   },
   watchOptions: {
     //不监听的node_modules目录下的文件,
     ignored: /node_modules/
   },
   devServer: {
-    contentBase: './devdist',
+    static: {
+      directory: path.join(__dirname, '../devdist')
+    },
     host: '0.0.0.0',
-    index: './test.html'
+    hot: true,
+    open: true,
+    compress: true
   },
   mode: "development",
   devtool: 'inline-source-map',
   plugins: [
-    new CleanWebpackPlugin({
-      root: getPath()
-    }),
+    new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       title: projectName,
-      filename: 'test.html',
+      filename: 'index.html',
       template: getPath('src/test/test.html'),
-    }),
+    })
     // new webpack.DefinePlugin({
     //   'process.env': configFile
-    // }),
-    new webpack.HotModuleReplacementPlugin()
+    // })
   ]
 });

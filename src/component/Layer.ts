@@ -190,7 +190,6 @@ export default class Layer extends Component {
   baseRender() {
     const {backgroundColor, border} = this.style;
     const {left, top, width, height} = this;
-
     if (backgroundColor) {
       drawRect(this.ctx, left, top + 1 , width, height - 1, backgroundColor)
     }
@@ -228,7 +227,6 @@ export default class Layer extends Component {
     let {left, top, height, width} = this;
     let x = 0;
     let y = top + height / 2;
-
     ctx.save();
     switch (this.align) {
       case "center":

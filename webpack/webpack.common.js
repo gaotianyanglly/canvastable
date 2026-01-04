@@ -9,7 +9,15 @@ module.exports = {
         use: [
           'style-loader',
           'css-loader',
-          'sass-loader'
+          {
+            loader: 'sass-loader',
+            options: {
+              api: 'legacy',
+              sassOptions: {
+                silenceDeprecations: ['legacy-js-api']
+              }
+            }
+          }
         ]
       },
       {
@@ -27,39 +35,24 @@ module.exports = {
       },
       {
         test: /\.(gif|png|jpe?g|svg)$/i,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[hash].[ext]',
-              outputPath: 'images/'
-            }
-          }
-        ],
+        type: 'asset/resource',
+        generator: {
+          filename: 'images/[name].[hash][ext]'
+        }
       },
       {
         test: /\.(eot|ttf|woff|woff2)$/i,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[hash].[ext]',
-              outputPath: 'fonts/'
-            }
-          }
-        ]
+        type: 'asset/resource',
+        generator: {
+          filename: 'fonts/[name].[hash][ext]'
+        }
       },
       {
         test: /\.(mov|mp4)$/,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[hash].[ext]',
-              outputPath: 'videos/'
-            }
-          }
-        ]
+        type: 'asset/resource',
+        generator: {
+          filename: 'videos/[name].[hash][ext]'
+        }
       }
     ]
   }

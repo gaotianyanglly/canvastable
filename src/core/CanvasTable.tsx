@@ -73,12 +73,13 @@ class CanvasTable {
   }
 
   ctxInit () {
-    this.ctx = this.canvas.getContext('2d', { alpha: false });
+    this.ctx = this.canvas.getContext('2d');
     this.ctx.setTransform(PIXEL_RATIO, 0, 0, PIXEL_RATIO, 0, 0);
     this.ctx.fillStyle = this.style.textColor;
     this.ctx.font = this.style.fontSize + ' ' + this.style.fontFamily;
     this.ctx.textBaseline = 'middle';
     this.ctx.strokeStyle = this.style.borderColor;
+    this.ctx.lineWidth = 1;  // 显式设置线宽为 1px
   }
 
   header: HeaderTree;
@@ -145,7 +146,14 @@ class CanvasTable {
 
   isFirstRender = true;
   render () {
+    // 先清空画布
     this.ctx.clearRect(0, 0, this.style.width, this.style.height);
+    // 填充白色背景
+    this.ctx.save();
+    this.ctx.fillStyle = 'white';
+    this.ctx.fillRect(0, 0, this.style.width, this.style.height);
+    this.ctx.restore();
+    // 渲染内容
     this.body.render();
     this.header.render();
     if (this.isFirstRender) {
