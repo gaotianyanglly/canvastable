@@ -23,6 +23,11 @@ export class CanvasTableEvent {
   eventX = 0;
   eventY = 0;
   eventHandler = (type: keyof IEventCollection, event) => {
+    // 检查事件目标是否是 DOM 覆盖层
+    if (this.isEventFromDomOverlay(event)) {
+      return; // 如果是 DOM 覆盖层的事件，跳过 Canvas 事件处理
+    }
+
     const {left, top} = this.table.wrapper.getBoundingClientRect();
     this.eventX = event.clientX - left;
     this.eventY = event.clientY - top;  //y position within the element.
@@ -37,6 +42,11 @@ export class CanvasTableEvent {
 
   private lastMoveEvent: LayerEvent = null;
   moveEventHandler = (event) => {
+    // 检查事件目标是否是 DOM 覆盖层
+    if (this.isEventFromDomOverlay(event)) {
+      return; // 如果是 DOM 覆盖层的事件，跳过 Canvas 事件处理
+    }
+
     const {left, top} = this.table.wrapper.getBoundingClientRect();
     this.eventX = event.clientX - left;
     this.eventY = event.clientY - top;  //y position within the element.
@@ -147,6 +157,25 @@ export class CanvasTableEvent {
 
     return entryLayer ? pathDig(entryLayer).reverse() : [];
   }
+  /**
+   * 检查事件是否来自 DOM 覆盖层
+   * 用于避免 DOM 覆盖层的事件与 Canvas 事件冲突
+   */
+  private isEventFromDomOverlay(event: MouseEvent): boolean {
+    let target = event.target as HTMLElement;
+
+    // 向上遍历 DOM 树，检查是否在 DOM 覆盖层内
+    while (target && target !== this.table.wrapper) {
+      // 检查是否是 DOM 覆盖层容器
+      if (target.classList && target.classList.contains('canvas-table-dom-overlay')) {
+        return true;
+      }
+      target = target.parentElement;
+    }
+
+    return false;
+  }
+
   get table () {
     return this.props.table
   }
