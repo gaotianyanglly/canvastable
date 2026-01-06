@@ -20,7 +20,7 @@ const pkg = require(getPath('package.json'));
 const projectName = pkg.projectName;
 
 module.exports = merge(webpackCommon, {
-  entry: PATH_SRC + '/test.tsx',
+  entry: PATH_SRC + '/selection-test.tsx',
   output: {
     filename: '[name].[fullhash].js',
     path: PATH_DIST,

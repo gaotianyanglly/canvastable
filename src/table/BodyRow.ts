@@ -112,7 +112,15 @@ export class BodyRow extends Layer {
   }
 
   highlight(flag: boolean) {
-    this.cells.forEach(cell => cell.style.backgroundColor = flag ? '#e6f7ff' : '#ffffff');
+    // 使用 SelectionManager 来更新背景色，确保选中状态优先级更高
+    this.cells.forEach(cell => {
+      if (this.table.selectionManager) {
+        this.table.selectionManager.updateCellBackgroundColor(cell, flag);
+      } else {
+        // 降级方案：如果没有 SelectionManager，使用原来的逻辑
+        cell.style.backgroundColor = flag ? '#e6f7ff' : '#ffffff';
+      }
+    });
     this.style.backgroundColor = flag ? '#e6f7ff' : '#ffffff';
     this.table.render()
   }

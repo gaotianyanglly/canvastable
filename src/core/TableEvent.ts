@@ -7,6 +7,9 @@ import {LayerEvent} from "./LayerEvent";
 type IEventCollection = IComponent.IEventCollection;
 
 export class CanvasTableEvent {
+  // 保存事件处理器引用，用于销毁时移除监听
+  private documentClickHandler: (e: MouseEvent) => void;
+
   constructor (protected props: {table: CanvasTable}) {
     this.init();
   }
@@ -18,6 +21,24 @@ export class CanvasTableEvent {
     wrapper.addEventListener('contextmenu', e => this.eventHandler('onContextMenu', e))
     wrapper.addEventListener('mousemove', e => this.moveEventHandler(e))
     wrapper.addEventListener('mouseleave', e => this.onMouseLeave(e))
+
+    // 添加选择相关的事件监听
+    wrapper.addEventListener('mousedown', e => this.onMouseDown(e))
+    wrapper.addEventListener('mouseup', e => this.onMouseUp(e))
+
+    // 添加全局点击监听，用于清除选中状态
+    this.documentClickHandler = (e: MouseEvent) => this.onDocumentClick(e);
+    document.addEventListener('click', this.documentClickHandler);
+  }
+
+  /**
+   * 销毁事件监听器
+   */
+  destroy() {
+    if (this.documentClickHandler) {
+      document.removeEventListener('click', this.documentClickHandler);
+      this.documentClickHandler = null;
+    }
   }
 
   eventX = 0;
@@ -50,6 +71,14 @@ export class CanvasTableEvent {
     const {left, top} = this.table.wrapper.getBoundingClientRect();
     this.eventX = event.clientX - left;
     this.eventY = event.clientY - top;  //y position within the element.
+
+    // 如果正在选择，更新选择区域
+    if (this.table.selectionManager.isCurrentlySelecting()) {
+      const cell = this.getCellAtPosition(this.eventX, this.eventY);
+      if (cell) {
+        this.table.selectionManager.updateSelection(cell);
+      }
+    }
 
     // debugger
     const currEvt = this.eventGenerate('onMouseEnter');
@@ -157,6 +186,85 @@ export class CanvasTableEvent {
 
     return entryLayer ? pathDig(entryLayer).reverse() : [];
   }
+  /**
+   * 鼠标按下事件处理（开始选择）
+   */
+  onMouseDown = (event: MouseEvent) => {
+    if (this.isEventFromDomOverlay(event)) {
+      return;
+    }
+
+    const {left, top} = this.table.wrapper.getBoundingClientRect();
+    const x = event.clientX - left;
+    const y = event.clientY - top;
+
+    const cell = this.getCellAtPosition(x, y);
+    if (cell) {
+      this.table.selectionManager.startSelection(cell);
+    } else {
+      // 点击空白区域，清除选择
+      this.table.selectionManager.clearSelection();
+    }
+  };
+
+  /**
+   * 鼠标释放事件处理（结束选择）
+   */
+  onMouseUp = (event: MouseEvent) => {
+    if (this.isEventFromDomOverlay(event)) {
+      return;
+    }
+
+    this.table.selectionManager.endSelection();
+  };
+
+  /**
+   * 全局点击事件处理（点击表格外部清除选中状态）
+   */
+  onDocumentClick = (event: MouseEvent) => {
+    // 检查点击目标是否在表格容器内
+    const wrapper = this.table.wrapper;
+    let target = event.target as HTMLElement;
+
+    // 向上遍历 DOM 树，检查是否点击在表格内
+    while (target) {
+      if (target === wrapper) {
+        // 点击在表格内，不清除选中状态
+        return;
+      }
+      target = target.parentElement;
+    }
+
+    // 点击在表格外部，清除选中状态
+    if (this.table.selectionManager) {
+      this.table.selectionManager.clearSelection();
+    }
+  };
+
+  /**
+   * 根据坐标获取单元格
+   */
+  private getCellAtPosition(x: number, y: number) {
+    // 跳过 header 区域
+    if (y <= this.table.header.height) {
+      return null;
+    }
+
+    // 查找对应的行
+    for (let row of this.table.body.rows) {
+      if (y > row.top && y < (row.top + row.height)) {
+        // 查找对应的列
+        for (let cell of row.cells) {
+          if (x > cell.left && x < (cell.left + cell.width)) {
+            return cell;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
   /**
    * 检查事件是否来自 DOM 覆盖层
    * 用于避免 DOM 覆盖层的事件与 Canvas 事件冲突

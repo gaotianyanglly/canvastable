@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>渲染层级修复测试 - Canvas Table</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .test-section {
+      margin-bottom: 40px;
+    }
+
+    .test-section h2 {
+      color: #1890ff;
+      margin-bottom: 15px;
+      font-size: 20px;
+      border-left: 4px solid #1890ff;
+      padding-left: 10px;
+    }
+
+    .test-description {
+      background: #f0f7ff;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      border-left: 3px solid #1890ff;
+    }
+
+    .test-description h3 {
+      color: #1890ff;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .test-description ul {
+      margin-left: 20px;
+      color: #666;
+    }
+
+    .test-description li {
+      margin-bottom: 5px;
+    }
+
+    .table-wrapper {
+      margin-bottom: 20px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      background: #1890ff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #40a9ff;
+    }
+
+    .btn-success {
+      background: #52c41a;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #73d13d;
+    }
+
+    .btn-warning {
+      background: #faad14;
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: #ffc53d;
+    }
+
+    .btn-danger {
+      background: #ff4d4f;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #ff7875;
+    }
+
+    .status-box {
+      background: #f6ffed;
+      border: 1px solid #b7eb8f;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+
+    .status-box h4 {
+      color: #52c41a;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .status-box ul {
+      margin-left: 20px;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .status-box li {
+      margin-bottom: 5px;
+    }
+
+    .external-element {
+      background: #fff7e6;
+      border: 2px dashed #ffa940;
+      padding: 20px;
+      border-radius: 4px;
+      text-align: center;
+      margin-top: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .external-element:hover {
+      background: #ffe7ba;
+      border-color: #ff7a45;
+    }
+
+    .external-element p {
+      color: #d46b08;
+      font-weight: 500;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 渲染层级修复测试</h1>
+    <p class="subtitle">测试选中边框、编辑标识与表头的渲染层级关系</p>
+
+    <!-- 测试 1 -->
+    <div class="test-section">
+      <h2>测试 1：选中边框不覆盖表头</h2>
+      <div class="test-description">
+        <h3>📋 测试步骤：</h3>
+        <ul>
+          <li>1. 点击"选中第一行"按钮</li>
+          <li>2. 观察蓝色选中边框是否覆盖表头</li>
+          <li>3. 预期结果：✅ 边框不覆盖表头，表头内容清晰可见</li>
+        </ul>
+      </div>
+      <div class="button-group">
+        <button class="btn-primary" onclick="selectFirstRow()">选中第一行</button>
+        <button class="btn-warning" onclick="clearSelection()">清除选中</button>
+      </div>
+      <div id="table1" class="table-wrapper"></div>
+    </div>
+
+    <!-- 测试 2 -->
+    <div class="test-section">
+      <h2>测试 2：编辑标识不覆盖表头</h2>
+      <div class="test-description">
+        <h3>📋 测试步骤：</h3>
+        <ul>
+          <li>1. 点击"标记第一行为已编辑"按钮</li>
+          <li>2. 观察红色三角形是否覆盖表头</li>
+          <li>3. 预期结果：✅ 三角形不覆盖表头，表头内容清晰可见</li>
+        </ul>
+      </div>
+      <div class="button-group">
+        <button class="btn-success" onclick="markFirstRowEdited()">标记第一行为已编辑</button>
+        <button class="btn-warning" onclick="clearEdited()">清除编辑标识</button>
+      </div>
+      <div id="table2" class="table-wrapper"></div>
+    </div>
+
+    <!-- 测试 3 -->
+    <div class="test-section">
+      <h2>测试 3：单选时编辑标识显示</h2>
+      <div class="test-description">
+        <h3>📋 测试步骤：</h3>
+        <ul>
+          <li>1. 点击"标记单元格为已编辑"按钮</li>
+          <li>2. 点击"单击选中该单元格"按钮</li>
+          <li>3. 预期结果：✅ 红色三角形仍然显示</li>
+        </ul>
+      </div>
+      <div class="button-group">
+        <button class="btn-success" onclick="markCellEdited()">标记单元格为已编辑</button>
+        <button class="btn-primary" onclick="selectSingleCell()">单击选中该单元格</button>
+        <button class="btn-warning" onclick="clearAll()">清除所有</button>
+      </div>
+      <div id="table3" class="table-wrapper"></div>
+    </div>
+
+    <!-- 测试 4 -->
+    <div class="test-section">
+      <h2>测试 4：点击外部清除选中</h2>
+      <div class="test-description">
+        <h3>📋 测试步骤：</h3>
+        <ul>
+          <li>1. 点击"选中单元格"按钮</li>
+          <li>2. 点击下方的橙色区域（表格外部）</li>
+          <li>3. 预期结果：✅ 选中状态被清除</li>
+        </ul>
+      </div>
+      <div class="button-group">
+        <button class="btn-primary" onclick="selectCellForTest4()">选中单元格</button>
+      </div>
+      <div id="table4" class="table-wrapper"></div>
+      <div class="external-element" onclick="handleExternalClick()">
+        <p>👆 点击这里（表格外部）应该清除选中状态</p>
+      </div>
+    </div>
+
+    <!-- 状态说明 -->
+    <div class="status-box">
+      <h4>✅ 修复确认清单</h4>
+      <ul>
+        <li>✅ 选中边框不覆盖表头</li>
+        <li>✅ 编辑标识不覆盖表头</li>
+        <li>✅ 单选时编辑标识正常显示</li>
+        <li>✅ 点击外部清除选中状态</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="./dist/canvastable.js"></script>
+  <script src="./test-rendering-fix.js"></script>
+</body>
+</html>
+

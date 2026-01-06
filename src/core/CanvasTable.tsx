@@ -14,6 +14,7 @@ import Layer from "../component/Layer";
 import Text from "../component/Text";
 import Svg from "../component/Svg";
 import Tooltip from './Tooltip';
+import {SelectionManager} from './SelectionManager';
 
 type ITableStyle = ICanvasTable.ITableStyle;
 type ICanvasTableProps = ICanvasTable.ICanvasTableProps;
@@ -36,6 +37,7 @@ class CanvasTable {
   ctx: CanvasRenderingContext2D = null;
   event: CanvasTableEvent = null;
   tooltip: Tooltip = null;
+  selectionManager: SelectionManager = null;
 
   init (isFirstTime = true) {
     const {container, style} = this.props;
@@ -43,6 +45,7 @@ class CanvasTable {
     this.domInit();
     if (isFirstTime) {
       this.event = new CanvasTableEvent({table: this});
+      this.selectionManager = new SelectionManager(this);
       if (container) {
         container.appendChild(this.wrapper);
       }
@@ -153,15 +156,127 @@ class CanvasTable {
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, this.style.width, this.style.height);
     this.ctx.restore();
+
     // 渲染内容
     this.body.render();
+
+    // 渲染选中状态和编辑标识（在表头之前，避免覆盖表头）
+    this.renderSelection();
+    this.renderAllEditedIndicators();
+
+    // 最后渲染表头，确保表头在最上层
     this.header.render();
+
     if (this.isFirstRender) {
       this.isFirstRender = false;
       setTimeout(() => {
         this.render();
       }, 30)
     }
+  }
+
+  /**
+   * 渲染选中区域的边框
+   * 注意：此方法会设置裁剪区域，避免选中边框覆盖表头
+   */
+  renderSelection() {
+    if (!this.selectionManager) return;
+
+    const range = this.selectionManager.getSelectionRange();
+    if (!range) return;
+
+    const { startRow, startCol, endRow, endCol } = range;
+
+    // 计算选中区域的边界
+    const firstRow = this.body.rows[startRow];
+    const lastRow = this.body.rows[endRow];
+    if (!firstRow || !lastRow) return;
+
+    const firstCell = firstRow.cells[startCol];
+    const lastCell = lastRow.cells[endCol];
+    if (!firstCell || !lastCell) return;
+
+    // 绘制选中区域的边框（带裁剪区域）
+    this.renderCellSelectionBorder(firstCell, lastCell, firstRow, lastRow);
+  }
+
+  /**
+   * 绘制单元格选中边框（可复用方法）
+   * @param firstCell 选中区域的第一个单元格
+   * @param lastCell 选中区域的最后一个单元格
+   * @param firstRow 选中区域的第一行
+   * @param lastRow 选中区域的最后一行
+   */
+  renderCellSelectionBorder(firstCell: any, lastCell: any, firstRow: any, lastRow: any) {
+    const left = firstCell.left;
+    const top = firstRow.top;
+    const width = lastCell.left + lastCell.width - left;
+    const height = lastRow.top + lastRow.height - top;
+
+    // 表头高度
+    const headerHeight = this.header.height;
+
+    this.ctx.save();
+
+    // 设置裁剪区域，避免边框覆盖表头
+    // 裁剪区域从表头下方开始
+    this.ctx.beginPath();
+    this.ctx.rect(0, headerHeight, this.style.width, this.style.height - headerHeight);
+    this.ctx.clip();
+
+    // 绘制选中边框
+    this.ctx.strokeStyle = '#1890ff'; // 蓝色边框
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(left, top, width, height);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * 渲染所有已编辑单元格的标识
+   * 注意：此方法会设置裁剪区域，避免编辑标识覆盖表头
+   */
+  renderAllEditedIndicators() {
+    if (!this.selectionManager) return;
+
+    const editedCells = this.selectionManager.getEditedCells();
+    if (editedCells.length === 0) return;
+
+    // 表头高度
+    const headerHeight = this.header.height;
+
+    this.ctx.save();
+
+    // 设置裁剪区域，避免编辑标识覆盖表头
+    this.ctx.beginPath();
+    this.ctx.rect(0, headerHeight, this.style.width, this.style.height - headerHeight);
+    this.ctx.clip();
+
+    // 渲染所有编辑标识
+    editedCells.forEach(cell => {
+      this.renderCellEditedIndicator(cell);
+    });
+
+    this.ctx.restore();
+  }
+
+  /**
+   * 在单元格左上角绘制红色小三角形（编辑标识）
+   * @param cell 要绘制编辑标识的单元格
+   * 注意：此方法不设置裁剪区域，应该在 renderAllEditedIndicators 中调用
+   */
+  renderCellEditedIndicator(cell: any) {
+    const triangleSize = 8; // 三角形大小（像素）
+    const left = cell.left;
+    const top = cell.row.top;
+
+    this.ctx.fillStyle = '#ff4d4f'; // 红色
+    this.ctx.beginPath();
+    this.ctx.moveTo(left, top); // 左上角顶点
+    this.ctx.lineTo(left + triangleSize, top); // 右边顶点
+    this.ctx.lineTo(left, top + triangleSize); // 下边顶点
+    this.ctx.closePath();
+    this.ctx.fill();
   }
 
   // scrollPosition = {scrollLeft: 0, scrollTop: 0};
@@ -299,6 +414,10 @@ class CanvasTable {
 
   destroy () {
     window.removeEventListener('resize', this.onWindowResizeHandler);
+    // 销毁事件监听器
+    if (this.event) {
+      this.event.destroy();
+    }
   }
 }
 

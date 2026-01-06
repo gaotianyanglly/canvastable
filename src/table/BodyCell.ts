@@ -12,11 +12,7 @@ export class BodyCell extends LayerText {
   constructor(protected props: IBodyCellProps) {
     super(props);
     this.style.backgroundColor = 'white';
-    this.on('onClick', () => {
-      if (!(this.customRendered instanceof Layer)) {
-        this.showSelection()
-      }
-    });
+    // onClick 事件已移除，改为在 TableEvent 中统一处理选择逻辑
     this.on('onMouseEnter', () => {
       if (this.textEllipsis.length !== this.text.length && this.textEllipsis !== this.text) {
         this.table.tooltip.show(this.text, this)
@@ -25,25 +21,6 @@ export class BodyCell extends LayerText {
     this.on('onMouseLeave', () => {
       this.table.tooltip.hide()
     })
-  }
-
-  showSelection () {
-    const selectionCell = this.table.selectionCell;
-    // const {padding} = this.table.style;
-    selectionCell.classList.remove('show');
-    setTimeout(() => {
-      selectionCell.value = this.text;
-      selectionCell.style.top = `${this.top + this.table.scroller.top + 1}px`;
-      selectionCell.style.left = `${this.left + this.table.scroller.left}px`;
-
-      // let width = this.ctx.measureText(this.text).width + padding * 2 + 2;
-      // if (this.left + width > this.table.width || width < this.width) {
-      //   width = this.width
-      // }
-      selectionCell.style.width = `${this.width}px`;
-      selectionCell.classList.add('show');
-      selectionCell.select();
-    }, 10)
   }
   update() {
     this._textEllipsis = '';
