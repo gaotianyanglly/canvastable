@@ -167,12 +167,21 @@ class HeaderTreeNode extends LayerText {
 
   borderRect() {
     const {left, top, width, height} = this;
-    // border-bottom
-    const borderTop = top + height;
-    drawLine(this.ctx, left, borderTop, left + width, borderTop);
-    // border-right
+
+    // 使用 0.5 像素偏移，确保 1px 线条清晰显示
+    const offset = 0.5;
+
+    // 使用表格的默认边框颜色
+    const borderColor = this.table.style.borderColor;
+
+    // border-bottom：底部边框
+    const borderBottom = top + height - offset;
+    drawLine(this.ctx, left, borderBottom, left + width, borderBottom, borderColor);
+
+    // border-right：右侧边框（仅在多层表头时绘制）
     if(this.header.deep > 1) {
-      drawLine(this.ctx,left + width - 1, top - 1, left + width - 1, top + height - 1);
+      const borderRight = left + width - offset;
+      drawLine(this.ctx, borderRight, top, borderRight, top + height, borderColor);
     }
   }
 

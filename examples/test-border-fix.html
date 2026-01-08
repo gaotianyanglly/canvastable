@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>边框修复测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+      background: #f5f5f5;
+    }
+    
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #1890ff;
+      padding-bottom: 10px;
+    }
+    
+    .info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    
+    #table-container {
+      border: 1px solid #ddd;
+      margin-top: 10px;
+    }
+    
+    .controls {
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 8px 16px;
+      margin-right: 10px;
+      background: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #40a9ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 单元格边框修复测试</h1>
+  
+  <div class="test-section">
+    <h2>测试场景</h2>
+    <div class="info">
+      <strong>测试目标：</strong>验证不同状态下的单元格边框是否清晰一致
+      <ul>
+        <li>默认状态单元格 - 白色背景</li>
+        <li>悬停状态单元格 - 浅蓝色背景 (#e6f7ff)</li>
+        <li>选中状态单元格 - 浅蓝色背景 + 蓝色边框</li>
+        <li>已编辑状态单元格 - 红色三角标识</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button onclick="testHover()">测试悬停效果</button>
+      <button onclick="testSelection()">测试选中效果</button>
+      <button onclick="testEdited()">测试编辑标识</button>
+      <button onclick="resetTable()">重置表格</button>
+    </div>
+    
+    <div id="table-container" style="height: 500px;"></div>
+  </div>
+
+  <script src="../umd/canvastable.min.js"></script>
+  <script>
+    let table = null;
+    
+    // 生成测试数据
+    function generateData(count) {
+      const data = [];
+      for (let i = 0; i < count; i++) {
+        data.push({
+          id: i + 1,
+          name: `用户${i + 1}`,
+          age: 20 + Math.floor(Math.random() * 40),
+          city: ['北京', '上海', '广州', '深圳'][Math.floor(Math.random() * 4)],
+          status: ['在职', '离职', '休假'][Math.floor(Math.random() * 3)]
+        });
+      }
+      return data;
+    }
+    
+    const columns = [
+      { title: 'ID', dataIndex: 'id', width: 80 },
+      { title: '姓名', dataIndex: 'name', width: 120 },
+      { title: '年龄', dataIndex: 'age', width: 80 },
+      { title: '城市', dataIndex: 'city', width: 120 },
+      { title: '状态', dataIndex: 'status', width: 100 }
+    ];
+    
+    function initTable() {
+      const container = document.getElementById('table-container');
+      
+      if (table) {
+        table.destroy();
+        container.innerHTML = '';
+      }
+      
+      table = new CanvasTable({
+        container: container,
+        columns: columns,
+        dataSource: generateData(20),
+        style: {
+          width: '100%',
+          height: 500
+        }
+      });
+      
+      console.log('表格已初始化');
+    }
+    
+    function testHover() {
+      alert('请将鼠标悬停在不同的单元格上，观察边框是否清晰一致');
+    }
+    
+    function testSelection() {
+      alert('请点击并拖动选择多个单元格，观察选中边框和背景色是否正确');
+    }
+    
+    function testEdited() {
+      if (table && table.selectionManager) {
+        // 标记一些单元格为已编辑
+        const rows = table.body.rows;
+        if (rows.length > 0) {
+          const cell1 = rows[0].cells[1];
+          const cell2 = rows[1].cells[2];
+          const cell3 = rows[2].cells[3];
+          
+          table.selectionManager.markCellAsEdited(cell1);
+          table.selectionManager.markCellAsEdited(cell2);
+          table.selectionManager.markCellAsEdited(cell3);
+          
+          table.render();
+          alert('已标记部分单元格为编辑状态，请观察红色三角标识和边框');
+        }
+      } else {
+        alert('SelectionManager 未初始化');
+      }
+    }
+    
+    function resetTable() {
+      initTable();
+    }
+    
+    // 初始化
+    window.addEventListener('load', () => {
+      initTable();
+    });
+  </script>
+</body>
+</html>
+

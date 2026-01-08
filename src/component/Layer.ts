@@ -190,22 +190,35 @@ export default class Layer extends Component {
   baseRender() {
     const {backgroundColor, border} = this.style;
     const {left, top, width, height} = this;
+
+    // 先绘制背景色（完整区域）
     if (backgroundColor) {
-      drawRect(this.ctx, left, top + 1 , width, height - 1, backgroundColor)
+      drawRect(this.ctx, left, top, width, height-2, backgroundColor);
     }
+
+    // 再绘制边框（覆盖在背景色上，确保边框清晰可见）
     if (isNotEmptyArray(border)) {
       const [topB, rightB, bottomB, leftB] = border;
+
+      // Canvas 线条绘制是居中对齐的，1px 线条在整数坐标上会模糊
+      // 使用 0.5 像素偏移，确保 1px 线条完全落在一个像素上
+      const offset = 1;
+
       if (topB) {
-        drawLine(this.ctx, left, top, left + width, top, topB.color)
+        // 顶部边框：y 坐标 + 0.5
+        drawLine(this.ctx, left, top + offset, left + width, top + offset, topB.color);
       }
       if (rightB) {
-        drawLine(this.ctx, left + width, top, left + width, top + height, rightB.color)
+        // 右侧边框：x 坐标 - 0.5
+        drawLine(this.ctx, left + width - offset, top, left + width - offset, top + height, rightB.color);
       }
       if (bottomB) {
-        drawLine(this.ctx, left, top + height, left + width, top + height, bottomB.color)
+        // 底部边框：y 坐标 - 0.5
+        drawLine(this.ctx, left, top + height - offset, left + width, top + height - offset, bottomB.color);
       }
       if (leftB) {
-        drawLine(this.ctx, left, top, left, top + height, leftB.color)
+        // 左侧边框：x 坐标 + 0.5
+        drawLine(this.ctx, left + offset, top, left + offset, top + height, leftB.color);
       }
     }
   }

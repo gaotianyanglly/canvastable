@@ -118,8 +118,14 @@ export class HeaderTree extends Component {
     }
     const ctx = this.table.ctx;
 
-    drawRect(ctx,0, 0, this.table.style.width, this.height, this.table.style.headerBackColor);
-    drawLine(ctx, 0, this.height - 1, this.table.style.width, this.height - 1);
+    // 绘制表头背景色
+    drawRect(ctx, 0, 0, this.table.style.width, this.height, this.table.style.headerBackColor);
+
+    // 绘制表头底部边框（使用 0.5 像素偏移，确保 1px 线条清晰）
+    const borderBottom = this.height - 0.5;
+    const borderColor = this.table.style.borderColor;
+    drawLine(ctx, 0, borderBottom, this.table.style.width, borderBottom, borderColor);
+
     const fixLeftCells = this.rootCells.filter(cell => cell.fixed === 'left');
     const fixRightCells = this.rootCells.filter(cell => cell.fixed === 'right');
     const notFixedCells = this.rootCells.filter(cell => cell.fixed !== 'left' && cell.fixed !== 'right');

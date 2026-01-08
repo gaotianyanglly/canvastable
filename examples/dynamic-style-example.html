@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动态样式配置示例</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .control-group {
+      display: inline-block;
+      margin-right: 20px;
+      margin-bottom: 10px;
+    }
+    
+    .control-group label {
+      display: inline-block;
+      width: 120px;
+      font-weight: bold;
+    }
+    
+    .control-group input,
+    .control-group select {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .control-group button {
+      padding: 6px 16px;
+      background: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .control-group button:hover {
+      background: #40a9ff;
+    }
+    
+    #table-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 动态样式配置示例</h1>
+    
+    <div class="info">
+      <strong>说明：</strong>通过下面的控件可以实时修改表格样式，无需重新创建表格实例。
+    </div>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>行高：</label>
+        <input type="number" id="rowHeight" value="40" min="20" max="100" />
+      </div>
+      
+      <div class="control-group">
+        <label>表头行高：</label>
+        <input type="number" id="headerRowHeight" value="40" min="20" max="100" />
+      </div>
+      
+      <div class="control-group">
+        <label>字体大小：</label>
+        <select id="fontSize">
+          <option value="12px">12px</option>
+          <option value="14px" selected>14px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label>文字颜色：</label>
+        <input type="color" id="textColor" value="#000000" />
+      </div>
+      
+      <div class="control-group">
+        <label>边框颜色：</label>
+        <input type="color" id="borderColor" value="#e8e8e8" />
+      </div>
+      
+      <div class="control-group">
+        <label>表头背景：</label>
+        <input type="color" id="headerBackColor" value="#fafafa" />
+      </div>
+      
+      <div class="control-group">
+        <label>背景颜色：</label>
+        <input type="color" id="backgroundColor" value="#ffffff" />
+      </div>
+      
+      <div class="control-group">
+        <button onclick="applyStyles()">应用样式</button>
+      </div>
+      
+      <div class="control-group">
+        <button onclick="resetStyles()">重置为默认</button>
+      </div>
+    </div>
+    
+    <div id="table-container"></div>
+  </div>
+
+  <script src="../umd/canvastable.min.js"></script>
+  <script>
+    // 创建表格实例
+    const table = new CanvasTable({
+      container: document.getElementById('table-container'),
+      columns: [
+        { title: 'ID', dataIndex: 'id', width: 80 },
+        { title: '姓名', dataIndex: 'name', width: 120 },
+        { title: '年龄', dataIndex: 'age', width: 80 },
+        { title: '城市', dataIndex: 'city', width: 120 },
+        { title: '职业', dataIndex: 'job', width: 150 },
+        { title: '邮箱', dataIndex: 'email', width: 200 }
+      ],
+      dataSource: generateData(100),
+      style: {
+        width: '100%',
+        height: 600
+      }
+    });
+
+    // 生成测试数据
+    function generateData(count) {
+      const cities = ['北京', '上海', '广州', '深圳', '杭州'];
+      const jobs = ['工程师', '设计师', '产品经理', '运营', '销售'];
+      const data = [];
+      
+      for (let i = 0; i < count; i++) {
+        data.push({
+          id: i + 1,
+          name: `用户${i + 1}`,
+          age: 20 + Math.floor(Math.random() * 40),
+          city: cities[Math.floor(Math.random() * cities.length)],
+          job: jobs[Math.floor(Math.random() * jobs.length)],
+          email: `user${i + 1}@example.com`
+        });
+      }
+      
+      return data;
+    }
+
+    // 应用样式
+    function applyStyles() {
+      table.updateStyles({
+        rowHeight: parseInt(document.getElementById('rowHeight').value),
+        headerRowHeight: parseInt(document.getElementById('headerRowHeight').value),
+        fontSize: document.getElementById('fontSize').value,
+        textColor: document.getElementById('textColor').value,
+        borderColor: document.getElementById('borderColor').value,
+        headerBackColor: document.getElementById('headerBackColor').value,
+        backgroundColor: document.getElementById('backgroundColor').value
+      });
+    }
+
+    // 重置样式
+    function resetStyles() {
+      table.resetStyle();
+      
+      // 同时重置控件值
+      document.getElementById('rowHeight').value = 40;
+      document.getElementById('headerRowHeight').value = 40;
+      document.getElementById('fontSize').value = '14px';
+      document.getElementById('textColor').value = '#000000';
+      document.getElementById('borderColor').value = '#e8e8e8';
+      document.getElementById('headerBackColor').value = '#fafafa';
+      document.getElementById('backgroundColor').value = '#ffffff';
+    }
+  </script>
+</body>
+</html>
+

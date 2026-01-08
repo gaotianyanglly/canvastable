@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug 修复验证测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+      background: #f5f5f5;
+    }
+    
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #1890ff;
+      padding-bottom: 10px;
+    }
+    
+    .controls {
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 8px 16px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      background: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background: #40a9ff;
+    }
+    
+    button.success {
+      background: #52c41a;
+    }
+    
+    button.danger {
+      background: #ff4d4f;
+    }
+    
+    .info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    
+    #table-container {
+      border: 1px solid #ddd;
+      margin-top: 10px;
+    }
+    
+    .test-result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    
+    .test-result.pass {
+      background: #f6ffed;
+      border: 1px solid #b7eb8f;
+      color: #52c41a;
+    }
+    
+    .test-result.fail {
+      background: #fff2f0;
+      border: 1px solid #ffccc7;
+      color: #ff4d4f;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Bug 修复验证测试</h1>
+  
+  <!-- 测试 1: 滚动条显示 -->
+  <div class="test-section">
+    <h2>测试 1: 滚动条显示问题</h2>
+    <div class="info">
+      <strong>测试目标：</strong>验证大数据量时滚动条是否正常显示和工作
+    </div>
+    
+    <div class="controls">
+      <button onclick="testScrollbar(100)">加载 100 行</button>
+      <button onclick="testScrollbar(1000)">加载 1000 行</button>
+      <button onclick="testScrollbar(5000)">加载 5000 行</button>
+      <button onclick="checkScrollbar()">检查滚动条状态</button>
+    </div>
+    
+    <div id="scrollbar-result"></div>
+    <div id="table-container-1" style="height: 400px;"></div>
+  </div>
+  
+  <!-- 测试 2: 样式更新 -->
+  <div class="test-section">
+    <h2>测试 2: 样式更新问题</h2>
+    <div class="info">
+      <strong>测试目标：</strong>验证动态修改样式后是否立即生效
+    </div>
+    
+    <div class="controls">
+      <button onclick="testStyleChange('rowHeight', 60)">设置行高 60px</button>
+      <button onclick="testStyleChange('rowHeight', 40)">恢复行高 40px</button>
+      <button onclick="testStyleChange('fontSize', '18px')">设置字体 18px</button>
+      <button onclick="testStyleChange('fontSize', '14px')">恢复字体 14px</button>
+      <button onclick="testStyleChange('textColor', '#ff0000')">设置红色文字</button>
+      <button onclick="testStyleChange('textColor', '#000000')">恢复黑色文字</button>
+      <button class="success" onclick="runAllStyleTests()">运行所有样式测试</button>
+    </div>
+    
+    <div id="style-result"></div>
+    <div id="table-container-2" style="height: 400px;"></div>
+  </div>
+
+  <script src="../umd/canvastable.min.js"></script>
+  <script>
+    let table1 = null;
+    let table2 = null;
+    
+    // 生成测试数据
+    function generateData(count) {
+      const data = [];
+      for (let i = 0; i < count; i++) {
+        data.push({
+          id: i + 1,
+          name: `用户${i + 1}`,
+          age: 20 + Math.floor(Math.random() * 40),
+          city: ['北京', '上海', '广州', '深圳'][Math.floor(Math.random() * 4)]
+        });
+      }
+      return data;
+    }
+    
+    const columns = [
+      { title: 'ID', dataIndex: 'id', width: 80 },
+      { title: '姓名', dataIndex: 'name', width: 120 },
+      { title: '年龄', dataIndex: 'age', width: 80 },
+      { title: '城市', dataIndex: 'city', width: 120 }
+    ];
+    
+    // 测试 1: 滚动条
+    function testScrollbar(rowCount) {
+      const container = document.getElementById('table-container-1');
+      
+      if (table1) {
+        table1.destroy();
+        container.innerHTML = '';
+      }
+      
+      table1 = new CanvasTable({
+        container: container,
+        columns: columns,
+        dataSource: generateData(rowCount),
+        style: {
+          width: '100%',
+          height: 400
+        }
+      });
+      
+      setTimeout(() => {
+        checkScrollbar();
+      }, 100);
+    }
+    
+    function checkScrollbar() {
+      if (!table1) {
+        showResult('scrollbar-result', '请先加载数据', 'fail');
+        return;
+      }
+      
+      const scroller = table1.scroller;
+      const hasScroller = !!scroller;
+      const scrollerElement = scroller ? scroller.scrollRef.current : null;
+      const hasScrollHeight = scrollerElement ? scrollerElement.scrollHeight > scrollerElement.clientHeight : false;
+      
+      console.log('滚动条检查:', {
+        hasScroller,
+        scrollerElement,
+        scrollHeight: scrollerElement?.scrollHeight,
+        clientHeight: scrollerElement?.clientHeight,
+        hasScrollHeight,
+        dataHeight: table1.dataHeight,
+        height: table1.height
+      });
+      
+      if (hasScroller && hasScrollHeight) {
+        showResult('scrollbar-result', 
+          `✅ 通过：滚动条正常显示 (数据高度: ${table1.dataHeight}px, 容器高度: ${table1.height}px)`, 
+          'pass');
+      } else if (hasScroller && !hasScrollHeight) {
+        showResult('scrollbar-result', 
+          `⚠️ 数据量不足以产生滚动条 (数据高度: ${table1.dataHeight}px, 容器高度: ${table1.height}px)`, 
+          'pass');
+      } else {
+        showResult('scrollbar-result', '❌ 失败：滚动条未创建', 'fail');
+      }
+    }
+    
+    // 测试 2: 样式更新
+    function initTable2() {
+      const container = document.getElementById('table-container-2');
+      
+      if (table2) {
+        table2.destroy();
+        container.innerHTML = '';
+      }
+      
+      table2 = new CanvasTable({
+        container: container,
+        columns: columns,
+        dataSource: generateData(50),
+        style: {
+          width: '100%',
+          height: 400
+        }
+      });
+    }
+    
+    function testStyleChange(key, value) {
+      if (!table2) {
+        initTable2();
+      }
+      
+      const oldValue = table2.styleManager.get(key);
+      table2.updateStyle(key, value);
+      
+      setTimeout(() => {
+        const newValue = table2.styleManager.get(key);
+        const styleApplied = table2.style[key];
+        
+        console.log('样式更新测试:', {
+          key,
+          oldValue,
+          newValue,
+          styleApplied,
+          expected: value
+        });
+        
+        if (newValue === value && styleApplied === value) {
+          showResult('style-result', 
+            `✅ 通过：${key} 已更新为 ${value} (旧值: ${oldValue})`, 
+            'pass');
+        } else {
+          showResult('style-result', 
+            `❌ 失败：${key} 更新失败 (期望: ${value}, 实际: ${newValue}, style: ${styleApplied})`, 
+            'fail');
+        }
+      }, 100);
+    }
+    
+    function runAllStyleTests() {
+      if (!table2) {
+        initTable2();
+      }
+      
+      const tests = [
+        { key: 'rowHeight', value: 60 },
+        { key: 'fontSize', value: '18px' },
+        { key: 'textColor', value: '#ff0000' }
+      ];
+      
+      let passCount = 0;
+      let totalCount = tests.length;
+      
+      tests.forEach((test, index) => {
+        setTimeout(() => {
+          const oldValue = table2.styleManager.get(test.key);
+          table2.updateStyle(test.key, test.value);
+          
+          setTimeout(() => {
+            const newValue = table2.styleManager.get(test.key);
+            const styleApplied = table2.style[test.key];
+            
+            if (newValue === test.value && styleApplied === test.value) {
+              passCount++;
+            }
+            
+            if (index === tests.length - 1) {
+              if (passCount === totalCount) {
+                showResult('style-result', 
+                  `✅ 全部通过：${passCount}/${totalCount} 个样式测试通过`, 
+                  'pass');
+              } else {
+                showResult('style-result', 
+                  `❌ 部分失败：${passCount}/${totalCount} 个样式测试通过`, 
+                  'fail');
+              }
+            }
+          }, 100);
+        }, index * 300);
+      });
+    }
+    
+    function showResult(elementId, message, type) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `<div class="test-result ${type}">${message}</div>`;
+    }
+    
+    // 初始化
+    window.addEventListener('load', () => {
+      testScrollbar(100);
+      initTable2();
+    });
+  </script>
+</body>
+</html>
+

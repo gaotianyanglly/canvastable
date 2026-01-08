@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>性能测试 - Canvas Table</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .stats {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1890ff;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .control-group {
+      display: inline-block;
+      margin-right: 20px;
+      margin-bottom: 10px;
+    }
+    
+    .control-group label {
+      display: inline-block;
+      width: 100px;
+      font-weight: bold;
+    }
+    
+    .control-group input,
+    .control-group select {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 150px;
+    }
+    
+    .control-group button {
+      padding: 8px 20px;
+      background: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .control-group button:hover {
+      background: #40a9ff;
+    }
+    
+    .control-group button.danger {
+      background: #ff4d4f;
+    }
+    
+    .control-group button.danger:hover {
+      background: #ff7875;
+    }
+    
+    #table-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .fps-monitor {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #0f0;
+      padding: 10px 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 18px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="fps-monitor" id="fps-monitor">FPS: --</div>
+  
+  <div class="container">
+    <h1>⚡ 性能测试 - Canvas Table</h1>
+    
+    <div class="info">
+      <strong>说明：</strong>此页面用于测试 Canvas Table 在大数据量场景下的性能表现。
+      可以调整数据量、触发频繁渲染等操作来测试性能。
+    </div>
+    
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-value" id="data-count">0</div>
+        <div class="stat-label">数据行数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="render-count">0</div>
+        <div class="stat-label">渲染次数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="avg-render-time">0</div>
+        <div class="stat-label">平均渲染时间 (ms)</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="fps">60</div>
+        <div class="stat-label">当前 FPS</div>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>数据行数：</label>
+        <input type="number" id="row-count" value="1000" min="100" max="100000" step="100" />
+      </div>
+      
+      <div class="control-group">
+        <button onclick="loadData()">加载数据</button>
+      </div>
+      
+      <div class="control-group">
+        <button onclick="startStressTest()">开始压力测试</button>
+      </div>
+      
+      <div class="control-group">
+        <button onclick="stopStressTest()" class="danger">停止测试</button>
+      </div>
+      
+      <div class="control-group">
+        <button onclick="resetStats()">重置统计</button>
+      </div>
+    </div>
+    
+    <div id="table-container"></div>
+  </div>
+
+  <script src="../umd/canvastable.min.js"></script>
+  <script>
+    // 性能统计
+    let renderCount = 0;
+    let totalRenderTime = 0;
+    let stressTestInterval = null;
+    
+    // FPS 监控
+    let lastFrameTime = performance.now();
+    let fps = 60;
+    
+    function updateFPS() {
+      const now = performance.now();
+      const delta = now - lastFrameTime;
+      fps = Math.round(1000 / delta);
+      lastFrameTime = now;
+
+      document.getElementById('fps-monitor').textContent = `FPS: ${fps}`;
+      document.getElementById('fps').textContent = fps;
+
+      requestAnimationFrame(updateFPS);
+    }
+    updateFPS();
+
+    // 创建表格实例
+    let table = null;
+
+    function createTable(rowCount) {
+      const container = document.getElementById('table-container');
+
+      // 如果已存在表格，先销毁
+      if (table) {
+        table.destroy();
+        container.innerHTML = '';
+      }
+
+      const startTime = performance.now();
+
+      table = new CanvasTable({
+        container: container,
+        columns: [
+          { title: 'ID', dataIndex: 'id', width: 80, fixed: 'left' },
+          { title: '姓名', dataIndex: 'name', width: 120 },
+          { title: '年龄', dataIndex: 'age', width: 80 },
+          { title: '性别', dataIndex: 'gender', width: 80 },
+          { title: '城市', dataIndex: 'city', width: 120 },
+          { title: '职业', dataIndex: 'job', width: 150 },
+          { title: '部门', dataIndex: 'department', width: 120 },
+          { title: '邮箱', dataIndex: 'email', width: 200 },
+          { title: '电话', dataIndex: 'phone', width: 130 },
+          { title: '地址', dataIndex: 'address', width: 250 },
+          { title: '状态', dataIndex: 'status', width: 100, fixed: 'right' }
+        ],
+        dataSource: generateData(rowCount),
+        style: {
+          width: '100%',
+          height: 600
+        }
+      });
+
+      const endTime = performance.now();
+      console.log(`表格创建耗时: ${(endTime - startTime).toFixed(2)}ms`);
+
+      // 监听渲染性能
+      monitorRenderPerformance();
+
+      updateStats();
+    }
+
+    // 生成测试数据
+    function generateData(count) {
+      const cities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安'];
+      const jobs = ['工程师', '设计师', '产品经理', '运营', '销售', '市场', '人力资源'];
+      const departments = ['技术部', '产品部', '运营部', '市场部', '销售部', '人力资源部'];
+      const statuses = ['在职', '离职', '休假'];
+      const genders = ['男', '女'];
+
+      const data = [];
+
+      for (let i = 0; i < count; i++) {
+        data.push({
+          id: i + 1,
+          name: `用户${i + 1}`,
+          age: 20 + Math.floor(Math.random() * 40),
+          gender: genders[Math.floor(Math.random() * genders.length)],
+          city: cities[Math.floor(Math.random() * cities.length)],
+          job: jobs[Math.floor(Math.random() * jobs.length)],
+          department: departments[Math.floor(Math.random() * departments.length)],
+          email: `user${i + 1}@example.com`,
+          phone: `138${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
+          address: `${cities[Math.floor(Math.random() * cities.length)]}市某某区某某街道${i + 1}号`,
+          status: statuses[Math.floor(Math.random() * statuses.length)]
+        });
+      }
+
+      return data;
+    }
+
+    // 监听渲染性能（简化版）
+    function monitorRenderPerformance() {
+      if (!table) return;
+
+      // 简化：只在特定操作时计数
+      // 实际的渲染性能可以通过浏览器开发者工具的 Performance 面板查看
+      console.log('表格已创建，数据行数:', table.source.length);
+    }
+
+    // 更新统计信息
+    function updateStats() {
+      const rowCount = table ? table.source.length : 0;
+      const avgRenderTime = renderCount > 0 ? (totalRenderTime / renderCount).toFixed(2) : 0;
+
+      document.getElementById('data-count').textContent = rowCount;
+      document.getElementById('render-count').textContent = renderCount;
+      document.getElementById('avg-render-time').textContent = avgRenderTime;
+    }
+
+    // 加载数据
+    function loadData() {
+      const rowCount = parseInt(document.getElementById('row-count').value);
+      createTable(rowCount);
+    }
+
+    // 开始压力测试
+    function startStressTest() {
+      if (stressTestInterval) return;
+
+      console.log('开始压力测试...');
+
+      // 每100ms触发一次渲染
+      stressTestInterval = setInterval(() => {
+        if (table) {
+          table.render();
+        }
+      }, 100);
+    }
+
+    // 停止压力测试
+    function stopStressTest() {
+      if (stressTestInterval) {
+        clearInterval(stressTestInterval);
+        stressTestInterval = null;
+        console.log('压力测试已停止');
+      }
+    }
+
+    // 重置统计
+    function resetStats() {
+      renderCount = 0;
+      totalRenderTime = 0;
+      updateStats();
+    }
+
+    // 初始化
+    createTable(1000);
+  </script>
+</body>
+</html>
+

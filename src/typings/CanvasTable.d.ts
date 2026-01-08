@@ -111,6 +111,7 @@ export declare module ICanvasTable {
   interface ICanvasTableProps {
     container: HTMLElement
     columns: IColumn[]
+    dataSource?: any[]
     style?: ITableStyleProps
     onScrollTop?: () => void
     // onScrollBottom?: () => void

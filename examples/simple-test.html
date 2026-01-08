@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简单测试 - Canvas Table</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+    }
+    
+    #table-container {
+      border: 1px solid #ddd;
+      margin-top: 20px;
+    }
+    
+    .controls {
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 8px 16px;
+      margin-right: 10px;
+      background: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #40a9ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Canvas Table 简单测试</h1>
+  
+  <div class="controls">
+    <button onclick="loadData(10)">加载 10 行</button>
+    <button onclick="loadData(100)">加载 100 行</button>
+    <button onclick="loadData(1000)">加载 1000 行</button>
+    <button onclick="checkTable()">检查表格状态</button>
+  </div>
+  
+  <div id="info" style="background: #f0f0f0; padding: 10px; margin-bottom: 10px;">
+    等待加载数据...
+  </div>
+  
+  <div id="table-container"></div>
+
+  <script src="../umd/canvastable.min.js"></script>
+  <script>
+    console.log('CanvasTable:', typeof CanvasTable);
+    
+    let table = null;
+    
+    function loadData(count) {
+      console.log('开始加载数据，行数:', count);
+      
+      const container = document.getElementById('table-container');
+      
+      // 销毁旧表格
+      if (table) {
+        console.log('销毁旧表格');
+        table.destroy();
+        container.innerHTML = '';
+      }
+      
+      // 生成数据
+      const data = [];
+      for (let i = 0; i < count; i++) {
+        data.push({
+          id: i + 1,
+          name: `用户${i + 1}`,
+          age: 20 + Math.floor(Math.random() * 40),
+          city: ['北京', '上海', '广州', '深圳'][Math.floor(Math.random() * 4)]
+        });
+      }
+      
+      console.log('生成的数据:', data.length, '行');
+      console.log('数据示例:', data[0]);
+      
+      // 创建表格
+      try {
+        table = new CanvasTable({
+          container: container,
+          columns: [
+            { title: 'ID', dataIndex: 'id', width: 80 },
+            { title: '姓名', dataIndex: 'name', width: 120 },
+            { title: '年龄', dataIndex: 'age', width: 80 },
+            { title: '城市', dataIndex: 'city', width: 120 }
+          ],
+          dataSource: data,
+          style: {
+            width: '100%',
+            height: 400
+          }
+        });
+        
+        console.log('表格创建成功');
+        console.log('table.source:', table.source);
+        console.log('table.source.length:', table.source.length);
+        
+        document.getElementById('info').innerHTML = 
+          `✅ 表格创建成功！数据行数: ${table.source.length}`;
+          
+      } catch (error) {
+        console.error('创建表格失败:', error);
+        document.getElementById('info').innerHTML = 
+          `❌ 创建表格失败: ${error.message}`;
+      }
+    }
+    
+    function checkTable() {
+      if (!table) {
+        console.log('表格未创建');
+        alert('表格未创建');
+        return;
+      }
+      
+      console.log('=== 表格状态 ===');
+      console.log('table:', table);
+      console.log('table.source:', table.source);
+      console.log('table.source.length:', table.source ? table.source.length : 'undefined');
+      console.log('table.canvas:', table.canvas);
+      console.log('table.ctx:', table.ctx);
+      console.log('table.body:', table.body);
+      console.log('table.header:', table.header);
+      
+      alert(`表格状态：\n数据行数: ${table.source ? table.source.length : 0}\nCanvas: ${table.canvas ? '已创建' : '未创建'}`);
+    }
+    
+    // 自动加载 10 行数据
+    window.addEventListener('load', () => {
+      console.log('页面加载完成，自动加载数据');
+      setTimeout(() => {
+        loadData(10);
+      }, 100);
+    });
+  </script>
+</body>
+</html>
+

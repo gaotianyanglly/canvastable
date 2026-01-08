@@ -15,6 +15,8 @@ import Text from "../component/Text";
 import Svg from "../component/Svg";
 import Tooltip from './Tooltip';
 import {SelectionManager} from './SelectionManager';
+import {StyleManager} from './StyleManager';
+import {RenderManager, OffscreenCanvasManager} from './RenderManager';
 
 type ITableStyle = ICanvasTable.ITableStyle;
 type ICanvasTableProps = ICanvasTable.ICanvasTableProps;
@@ -28,6 +30,9 @@ class CanvasTable {
   static Svg = Svg
 
   style: ITableStyle = null;
+  styleManager: StyleManager = null;
+  renderManager: RenderManager = null;
+  offscreenManager: OffscreenCanvasManager = null;
 
   constructor(public props: ICanvasTableProps) {
     this.init()
@@ -41,6 +46,25 @@ class CanvasTable {
 
   init (isFirstTime = true) {
     const {container, style} = this.props;
+
+    // 初始化管理器
+    if (isFirstTime) {
+      // 样式管理器
+      this.styleManager = new StyleManager(style);
+      this.styleManager.onChange((changedKeys) => {
+        console.log('Style changed:', changedKeys);
+        this.onStyleChange(changedKeys);
+      });
+
+      // 渲染管理器
+      this.renderManager = new RenderManager(() => {
+        this.performRender();
+      });
+
+      // 离屏Canvas管理器
+      this.offscreenManager = new OffscreenCanvasManager();
+    }
+
     this.styleCalc();
     this.domInit();
     if (isFirstTime) {
@@ -52,6 +76,11 @@ class CanvasTable {
     }
     this.ctxInit();
     this.componentsInit();
+
+    // 初始化数据源
+    if (isFirstTime && this.props.dataSource) {
+      this.source = this.props.dataSource;
+    }
 
     if (isFirstTime) {
       if (typeof style.height === 'string' || typeof style.width === 'string') {
@@ -66,7 +95,15 @@ class CanvasTable {
   styleCalc () {
     this.props.style = {...DEFAULT_STYLE, ...(this.props.style || {})};
     const {height, width, ...style} = this.props.style;
-    this.style = style;
+
+    // 如果有 styleManager，从 styleManager 获取最新样式（排除 width 和 height）
+    if (this.styleManager) {
+      const managerStyle = this.styleManager.getAll();
+      const {width: _w, height: _h, ...styleWithoutSize} = managerStyle;
+      this.style = {...style, ...styleWithoutSize};
+    } else {
+      this.style = style;
+    }
 
     this.outerWidth = percentCalc(width, () => this.props.container.clientWidth);
     this.outerHeight = percentCalc(height, () => this.props.container.clientHeight);
@@ -78,10 +115,14 @@ class CanvasTable {
   ctxInit () {
     this.ctx = this.canvas.getContext('2d');
     this.ctx.setTransform(PIXEL_RATIO, 0, 0, PIXEL_RATIO, 0, 0);
-    this.ctx.fillStyle = this.style.textColor;
-    this.ctx.font = this.style.fontSize + ' ' + this.style.fontFamily;
+
+    // 从 styleManager 获取最新样式（如果存在）
+    const currentStyle = this.styleManager ? this.styleManager.getAll() : this.style;
+
+    this.ctx.fillStyle = currentStyle.textColor;
+    this.ctx.font = currentStyle.fontSize + ' ' + currentStyle.fontFamily;
     this.ctx.textBaseline = 'middle';
-    this.ctx.strokeStyle = this.style.borderColor;
+    this.ctx.strokeStyle = currentStyle.borderColor;
     this.ctx.lineWidth = 1;  // 显式设置线宽为 1px
   }
 
@@ -141,14 +182,44 @@ class CanvasTable {
   dataWidth: number = 0; // 表格数据真实宽度
 
   sizeCalc () {
-    this.dataHeight = this.header.height + this.source.length * this.style.rowHeight;
+    // 获取当前有效的 rowHeight（优先从 styleManager）
+    const rowHeight = this.styleManager ? this.styleManager.get('rowHeight') : this.style.rowHeight;
+
+    this.dataHeight = this.header.height + this.source.length * rowHeight;
     this.dataWidth = this.header.columns.reduce(((pre, col) => pre + col.width), 0);
     this.height = Math.max(this.style.height, this.dataHeight);
     this.width = Math.max(this.style.width, this.dataWidth);
   }
 
   isFirstRender = true;
+
+  /**
+   * 请求渲染（使用RAF优化）
+   */
   render () {
+    if (this.renderManager) {
+      this.renderManager.requestRender();
+    } else {
+      // 降级处理：直接渲染
+      this.performRender();
+    }
+  }
+
+  /**
+   * 立即渲染
+   */
+  renderImmediate() {
+    if (this.renderManager) {
+      this.renderManager.requestRender(true);
+    } else {
+      this.performRender();
+    }
+  }
+
+  /**
+   * 执行实际的渲染操作
+   */
+  private performRender() {
     // 先清空画布
     this.ctx.clearRect(0, 0, this.style.width, this.style.height);
     // 填充白色背景
@@ -412,11 +483,91 @@ class CanvasTable {
     this.wrapper.appendChild(this.tooltip.wrapper);
   }
 
+  /**
+   * 处理样式变更
+   */
+  private onStyleChange(changedKeys: string[]): void {
+    // 同步 styleManager 的样式到 this.style
+    if (this.styleManager) {
+      const managerStyle = this.styleManager.getAll();
+      const {width: _w, height: _h, ...styleWithoutSize} = managerStyle;
+      Object.assign(this.style, styleWithoutSize);
+    }
+
+    // 如果尺寸相关的样式变更，需要重新计算布局
+    const sizeKeys = ['rowHeight', 'columnWidth', 'headerRowHeight', 'padding'];
+    const needsResize = changedKeys.some(key => sizeKeys.includes(key));
+
+    if (needsResize) {
+      // 重新计算尺寸
+      this.sizeCalc();
+      // 更新滚动条
+      if (this.scroller) {
+        this.scroller.update(this.width, this.height, this.dataWidth, this.dataHeight);
+      }
+      // 重新初始化上下文和渲染
+      this.ctxInit();
+      this.render();
+    } else {
+      // 只需要重新渲染
+      this.ctxInit();  // 重新初始化上下文（字体、颜色等）
+      this.render();
+    }
+  }
+
+  /**
+   * 更新样式配置（单个）
+   */
+  updateStyle<K extends keyof ICanvasTable.ITableStyleProps>(
+    key: K,
+    value: ICanvasTable.ITableStyleProps[K]
+  ): void {
+    if (this.styleManager) {
+      this.styleManager.set(key, value);
+    }
+  }
+
+  /**
+   * 批量更新样式配置
+   */
+  updateStyles(styles: Partial<ICanvasTable.ITableStyleProps>): void {
+    if (this.styleManager) {
+      this.styleManager.setMultiple(styles);
+    }
+  }
+
+  /**
+   * 获取当前样式配置
+   */
+  getStyle(): Readonly<ICanvasTable.ITableStyleProps> {
+    return this.styleManager ? this.styleManager.getAll() : {...this.style};
+  }
+
+  /**
+   * 重置样式为默认值
+   */
+  resetStyle(): void {
+    if (this.styleManager) {
+      this.styleManager.reset();
+    }
+  }
+
   destroy () {
     window.removeEventListener('resize', this.onWindowResizeHandler);
+
     // 销毁事件监听器
     if (this.event) {
       this.event.destroy();
+    }
+
+    // 销毁渲染管理器
+    if (this.renderManager) {
+      this.renderManager.destroy();
+    }
+
+    // 清理离屏Canvas缓存
+    if (this.offscreenManager) {
+      this.offscreenManager.clearAll();
     }
   }
 }

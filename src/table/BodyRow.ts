@@ -9,14 +9,18 @@ type IRowProps = ICanvasTable.IRowProps;
 type IEventCollection = IComponent.IEventCollection;
 
 export class BodyRow extends Layer {
+  index: number;
+
   constructor(protected props: IRowProps) {
     super({
       ...props,
       style: {
         backgroundColor: 'white',
-        border: [null, null, `1px`, null]
+        // 底部边框：1px 宽度，使用默认边框颜色 #e8e8e8
+        border: [null, null, `1px #e8e8e8`, null]
       }
     });
+    this.index = this.props.index;
     this.on('onMouseEnter', () => {
       this.highlight(true)
     });
@@ -24,7 +28,7 @@ export class BodyRow extends Layer {
       this.highlight(false)
     });
   }
-  index = this.props.index;
+
   get data () {
     return this.table.source[this.index]
   }
